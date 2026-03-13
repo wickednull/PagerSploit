@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hotel WiFi - Sign In</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: Arial, sans-serif;
+  background: #1a1a2e;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  padding: 20px;
+}
+.container {
+  background: #fff;
+  border-radius: 8px;
+  padding: 32px;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.4);
+}
+.logo {
+  text-align: center;
+  font-size: 22px;
+  font-weight: bold;
+  color: #c8a96e;
+  letter-spacing: 2px;
+  margin-bottom: 4px;
+}
+.tagline {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 24px;
+}
+h2 {
+  font-size: 18px;
+  color: #333;
+  margin-bottom: 6px;
+}
+p {
+  font-size: 13px;
+  color: #666;
+  margin-bottom: 20px;
+}
+label {
+  display: block;
+  font-size: 13px;
+  color: #444;
+  margin-bottom: 4px;
+  font-weight: bold;
+}
+input[type=text], input[type=email], input[type=password] {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  margin-bottom: 14px;
+  outline: none;
+}
+input:focus { border-color: #c8a96e; }
+button {
+  width: 100%;
+  padding: 12px;
+  background: #c8a96e;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  font-size: 15px;
+  font-weight: bold;
+  cursor: pointer;
+  letter-spacing: 1px;
+}
+button:hover { background: #b8945a; }
+.terms {
+  text-align: center;
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 16px;
+}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="logo">★ GRAND HOTEL ★</div>
+  <div class="tagline">Complimentary Guest WiFi</div>
+  <h2>Welcome, Guest</h2>
+  <p>Please sign in with your room details to access the internet.</p>
+  <form method="POST" action="/login">
+    <label>Email Address</label>
+    <input type="email" name="email" placeholder="your@email.com" required>
+    <label>Last Name</label>
+    <input type="text" name="lastname" placeholder="Smith" required>
+    <label>Room Number</label>
+    <input type="text" name="room" placeholder="e.g. 412" required>
+    <button type="submit">CONNECT TO WIFI</button>
+  </form>
+  <div class="terms">By connecting you agree to our Terms of Service.<br>Session limited to 24 hours.</div>
+</div>
+</body>
+</html>
