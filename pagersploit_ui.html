@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0">
+<title>PagerSploit</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>💀</text></svg>">
+<style>
+:root{--bg:#04040c;--panel:#080818;--border:#00ffb4;--text:#dcdcdc;--dim:#555;
+  --green:#00ff50;--red:#ff2828;--yellow:#ffdc00;--orange:#ff8c00;
+  --blue:#00b4ff;--title:#00ffb4;--purple:#c060ff}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--text);font-family:"Courier New",monospace;font-size:13px}
+#app{display:flex;height:100vh;overflow:hidden}
+#sidebar{width:210px;min-width:210px;background:var(--panel);border-right:1px solid #111;display:flex;flex-direction:column;overflow-y:auto}
+#sidebar-header{padding:12px 10px;border-bottom:1px solid var(--border);color:var(--title);font-size:14px;font-weight:bold;letter-spacing:2px}
+#sidebar-header span{font-size:10px;color:var(--dim);display:block;margin-top:2px}
+.nav-group{padding:5px 0;border-bottom:1px solid #0c0c1a}
+.nav-group-title{padding:4px 10px;font-size:10px;color:var(--dim);letter-spacing:1px}
+.nav-item{padding:5px 14px;cursor:pointer;color:var(--dim);border-left:2px solid transparent;font-size:12px}
+.nav-item:hover{color:var(--text);background:#0a0a1a}
+.nav-item.active{color:var(--title);border-left-color:var(--title);background:#050518}
+#status-bar{padding:8px 10px;border-top:1px solid #111;font-size:11px;color:var(--dim);margin-top:auto}
+#main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+#topbar{padding:7px 16px;background:var(--panel);border-bottom:1px solid #111;display:flex;align-items:center;justify-content:space-between}
+#topbar h2{color:var(--title);font-size:13px;letter-spacing:1px}
+#content{flex:1;overflow-y:auto;padding:14px}
+#log-bar{height:88px;background:#020208;border-top:1px solid #111;overflow-y:auto;padding:4px 10px;font-size:11px}
+.panel{background:var(--panel);border:1px solid #111;border-radius:3px;margin-bottom:12px}
+.panel-title{padding:7px 12px;border-bottom:1px solid #111;color:var(--blue);font-size:11px;letter-spacing:1px}
+.panel-body{padding:12px}
+.form-row{margin-bottom:9px}
+.form-row label{display:block;color:var(--dim);font-size:11px;margin-bottom:3px}
+input,select,textarea{background:#06060f;border:1px solid #222;color:var(--text);padding:5px 8px;border-radius:2px;font-family:monospace;font-size:12px;width:100%}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--border)}
+.btn{padding:6px 14px;border:1px solid;border-radius:2px;cursor:pointer;font-family:monospace;font-size:12px;background:transparent}
+.btn-green{color:var(--green);border-color:var(--green)}
+.btn-red{color:var(--red);border-color:var(--red)}
+.btn-yellow{color:var(--yellow);border-color:var(--yellow)}
+.btn-orange{color:var(--orange);border-color:var(--orange)}
+.btn-blue{color:var(--blue);border-color:var(--blue)}
+.btn-purple{color:var(--purple);border-color:var(--purple)}
+.btn:hover{opacity:.75;background:rgba(255,255,255,.03)}
+.btn-sm{padding:2px 9px;font-size:11px}
+table{width:100%;border-collapse:collapse;font-size:12px}
+th{text-align:left;padding:5px 8px;color:var(--dim);border-bottom:1px solid #111;font-weight:normal;font-size:11px}
+td{padding:5px 8px;border-bottom:1px solid #0a0a18}
+tr:hover td{background:#0a0a18}
+.tag{display:inline-block;padding:1px 6px;border-radius:2px;font-size:10px}
+.tag-green{background:#001a08;color:var(--green);border:1px solid #003010}
+.tag-red{background:#1a0000;color:var(--red);border:1px solid #300000}
+.tag-yellow{background:#1a1400;color:var(--yellow);border:1px solid #302800}
+.tag-blue{background:#001020;color:var(--blue);border:1px solid #002040}
+.tag-orange{background:#1a0800;color:var(--orange);border:1px solid #302000}
+.tag-purple{background:#100018;color:var(--purple);border:1px solid #200030}
+.log-info{color:var(--dim)}.log-success{color:var(--green)}.log-error{color:var(--red)}.log-warn{color:var(--orange)}
+.sig{display:inline-block;width:38px;height:7px;background:#111;border-radius:2px;vertical-align:middle}
+.sig-fill{height:100%;border-radius:2px}
+.hidden{display:none}
+.grid-2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+pre.out{color:var(--green);font-size:11px;max-height:280px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+.rbox{background:#020210;border:1px solid #111;border-radius:2px;padding:10px;margin-top:8px;font-size:11px;max-height:260px;overflow-y:auto;white-space:pre-wrap;word-break:break-all}
+@media(max-width:700px){
+  .grid-2{grid-template-columns:1fr}
+  #sidebar{display:none;position:fixed;top:0;left:0;height:100vh;z-index:1000;width:240px;overflow-y:auto}
+  #sidebar.open{display:flex}
+  #sidebar-overlay{display:none;position:fixed;top:0;left:0;width:100vw;height:100vh;background:rgba(0,0,0,0.6);z-index:999}
+  #sidebar-overlay.open{display:block}
+  #hamburger{display:flex}
+  #topbar{padding:6px 10px}
+}
+@media(min-width:701px){#hamburger{display:none}#sidebar-overlay{display:none}}
+</style></head>
+<body>
+<div id="app">
+<div id="sidebar">
+  <div id="sidebar-header">PAGERSPLOIT<span>v2.0 // wickedNull</span></div>
+  <div class="nav-group">
+    <div class="nav-group-title">DASHBOARD</div>
+    <div class="nav-item active" onclick="show('dashboard')">&#9632; Overview</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">WIFI ATTACKS</div>
+    <div class="nav-item" onclick="show('wifi-scan')">&#9670; AP Scanner</div>
+    <div class="nav-item" onclick="show('wifi-deauth')">&#9670; Deauth</div>
+    <div class="nav-item" onclick="show('wifi-capture')">&#9670; Handshake Capture</div>
+    <div class="nav-item" onclick="show('wifi-crack')">&#9670; WPA Crack</div>
+    <div class="nav-item" onclick="show('wifi-pmkid')">&#9670; PMKID Capture</div>
+    <div class="nav-item" onclick="show('wifi-evil-twin')">&#9670; Evil Twin</div>
+    <div class="nav-item" onclick="show('wifi-karma')">&#9670; Karma Attack</div>
+    <div class="nav-item" onclick="show('wifi-beacon')">&#9670; Beacon Flood</div>
+    <div class="nav-item" onclick="show('wifi-probe')">&#9670; Probe Harvest</div>
+    <div class="nav-item" onclick="show('wifi-auth-flood')">&#9670; Auth Flood</div>
+    <div class="nav-item" onclick="show('wifi-wps')">&#9670; WPS Scan</div>
+    <div class="nav-item" onclick="show('wifi-chanhop')">&#9670; Channel Hop</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">LAN ATTACKS</div>
+    <div class="nav-item" onclick="show('lan-arp')">&#9670; ARP Scan</div>
+    <div class="nav-item" onclick="show('lan-ping')">&#9670; Ping Sweep</div>
+    <div class="nav-item" onclick="show('lan-portscan')">&#9670; Port Scan</div>
+    <div class="nav-item" onclick="show('lan-servicescan')">&#9670; Service Scan</div>
+    <div class="nav-item" onclick="show('lan-os')">&#9670; OS Detection</div>
+    <div class="nav-item" onclick="show('lan-banner')">&#9670; Banner Grab</div>
+    <div class="nav-item" onclick="show('lan-creds')">&#9670; Default Creds</div>
+    <div class="nav-item" onclick="show('lan-ssh')">&#9670; SSH Brute</div>
+    <div class="nav-item" onclick="show('lan-smb')">&#9670; SMB Enum</div>
+    <div class="nav-item" onclick="show('lan-snmp')">&#9670; SNMP Walk</div>
+    <div class="nav-item" onclick="show('lan-ssl')">&#9670; SSL Cert</div>
+    <div class="nav-item" onclick="show('lan-mdns')">&#9670; mDNS Discovery</div>
+    <div class="nav-item" onclick="show('lan-dns-spoof')">&#9670; DNS Spoof</div>
+    <div class="nav-item" onclick="show('lan-http')">&#9670; HTTP Intercept</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">OSINT</div>
+    <div class="nav-item" onclick="show('osint-mac')">&#9670; MAC Lookup</div>
+    <div class="nav-item" onclick="show('osint-ipgeo')">&#9670; IP Geolocation</div>
+    <div class="nav-item" onclick="show('osint-whois')">&#9670; WHOIS</div>
+    <div class="nav-item" onclick="show('osint-dns')">&#9670; DNS Enum</div>
+    <div class="nav-item" onclick="show('osint-dnsbrute')">&#9670; DNS Brute</div>
+    <div class="nav-item" onclick="show('osint-wifigeo')">&#9670; WiFi Geolocate</div>
+    <div class="nav-item" onclick="show('osint-http')">&#9670; HTTP Fingerprint</div>
+    <div class="nav-item" onclick="show('osint-sysrecon')">&#9670; System Recon</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">LOOT</div>
+    <div class="nav-item" onclick="show('loot')">&#9670; Loot Manager</div>
+  </div>
+  <div class="nav-group">
+    <div class="nav-group-title">SYSTEM</div>
+    <div class="nav-item" onclick="show('terminal')">&#9654; Terminal</div>
+  </div>
+  <div id="status-bar">Module: <span style="color:var(--orange)" id="sb-mod">idle</span><br>
+    <span id="sb-status" style="color:#444">Standing by</span></div>
+</div>
+<div id="main">
+  <div id="sidebar-overlay" onclick="toggleSidebar()"></div>
+<div id="topbar">
+  <button id="hamburger" onclick="toggleSidebar()" style="background:none;border:1px solid var(--title);color:var(--title);padding:4px 10px;cursor:pointer;font-size:16px;margin-right:10px;border-radius:3px">&#9776;</button>
+    <h2 id="page-title">OVERVIEW</h2>
+    <div style="font-size:11px;color:var(--dim)">
+      <span id="tb-ip">172.16.52.1:8080</span> &nbsp;|&nbsp;
+      Loot: <span style="color:var(--yellow)" id="tb-loot">0</span> &nbsp;
+      <button class="btn btn-red btn-sm" onclick="stopAll()">&#9632; STOP ALL</button>
+    </div>
+  </div>
+  <div id="content">
+
+  <div id="page-dashboard" class="page">
+    <div class="grid-2">
+      <div class="panel"><div class="panel-title">STATUS</div><div class="panel-body">
+        <table>
+          <tr><td style="color:var(--dim)">Server</td><td id="d-ip" style="color:var(--green)">-</td></tr>
+          <tr><td style="color:var(--dim)">Module</td><td id="d-mod" style="color:var(--orange)">idle</td></tr>
+          <tr><td style="color:var(--dim)">Status</td><td id="d-status">-</td></tr>
+          <tr><td style="color:var(--dim)">Jobs</td><td id="d-jobs" style="color:var(--yellow)">0</td></tr>
+          <tr><td style="color:var(--dim)">Loot</td><td id="d-loot" style="color:var(--yellow)">0</td></tr>
+        </table>
+      </div></div>
+      <div class="panel"><div class="panel-title">QUICK ACTIONS</div><div class="panel-body">
+        <button class="btn btn-blue" style="width:100%;margin-bottom:6px" onclick="show('wifi-scan');doScan()">&#9670; Scan APs</button>
+        <button class="btn btn-blue" style="width:100%;margin-bottom:6px" onclick="show('lan-arp');doArp()">&#9670; ARP Scan LAN</button>
+        <button class="btn btn-purple" style="width:100%;margin-bottom:6px" onclick="show('osint-sysrecon');doSysRecon()">&#9670; System Recon</button>
+        <button class="btn btn-red" style="width:100%" onclick="stopAll()">&#9632; Stop All</button>
+      </div></div>
+    </div>
+    <div class="panel"><div class="panel-title">LAST SCAN <span id="d-ap-count" style="color:var(--dim)"></span></div>
+      <div class="panel-body" style="max-height:200px;overflow-y:auto">
+        <table><thead><tr><th>SSID</th><th>BSSID</th><th>CH</th><th>ENC</th><th>VENDOR</th><th>SIG</th><th></th></tr></thead>
+        <tbody id="d-ap-body"><tr><td colspan="7" style="color:var(--dim)">No scan data</td></tr></tbody></table>
+      </div></div>
+  </div>
+
+  <div id="page-wifi-scan" class="page hidden">
+    <div class="panel"><div class="panel-title">AP SCANNER</div><div class="panel-body" style="display:flex;align-items:center;flex-wrap:wrap;gap:8px">
+      <button class="btn btn-green" onclick="doScan()">&#9670; Scan Now</button>
+      <select id="scan-band" style="width:110px;padding:5px">
+        <option value="abg">All bands</option>
+        <option value="bg">2.4 GHz only</option>
+        <option value="a">5 GHz only</option>
+        <option value="6">6 GHz only</option>
+      </select>
+      <button class="btn btn-yellow btn-sm" onclick="loadCachedScan()" title="Show last scan results instantly">&#9670; Cached</button>
+      <button class="btn btn-orange" onclick="doWifiGeo()">&#9670; Geolocate Results</button>
+      <span id="scan-status" style="color:var(--dim)"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULTS <span id="scan-count" style="color:var(--dim)"></span></div>
+      <div class="panel-body" style="overflow-x:auto">
+        <table><thead><tr><th>SSID</th><th>BSSID</th><th>CH</th><th>ENC</th><th>VENDOR</th><th>SIG</th><th>ACTIONS</th></tr></thead>
+        <tbody id="scan-body"><tr><td colspan="7" style="color:var(--dim)">Click Scan Now</td></tr></tbody></table>
+      </div></div>
+  </div>
+
+  <div id="page-wifi-deauth" class="page hidden">
+    <div class="panel"><div class="panel-title">DEAUTH ATTACK</div><div class="panel-body">
+      <div class="form-row"><label>BSSID</label><input id="da-bssid" placeholder="AA:BB:CC:DD:EE:FF"></div>
+      <div class="form-row"><label>Channel</label><input id="da-ch" value="6" style="width:80px"></div>
+      <div class="form-row"><label>Client (FF:FF:FF:FF:FF:FF = broadcast)</label><input id="da-client" value="FF:FF:FF:FF:FF:FF"></div>
+      <div class="form-row"><label>Count (0=continuous)</label><input id="da-count" value="0" style="width:80px"></div>
+      <button class="btn btn-red" onclick="doDeauth()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('deauth')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-capture" class="page hidden">
+    <div class="panel"><div class="panel-title">HANDSHAKE CAPTURE</div><div class="panel-body">
+      <div class="form-row"><label>BSSID</label><input id="cap-bssid" placeholder="AA:BB:CC:DD:EE:FF"></div>
+      <div class="form-row"><label>SSID</label><input id="cap-ssid" placeholder="TargetNetwork"></div>
+      <div class="form-row"><label>Channel</label><input id="cap-ch" value="6" style="width:80px"></div>
+      <button class="btn btn-green" onclick="doCapture()">&#9670; Capture</button>
+      <button class="btn btn-orange" onclick="doCapDeauth()" style="margin-left:8px">&#9670; Capture + Deauth</button>
+      <button class="btn btn-yellow" onclick="stop('capture')" style="margin-left:8px">&#9632; Stop</button>
+      <p id="cap-status" style="color:var(--dim);margin-top:8px"></p>
+    </div></div>
+    <div class="panel"><div class="panel-title">CAPTURED HANDSHAKES</div><div class="panel-body">
+      <p style="color:var(--dim);font-size:11px;margin-bottom:8px">Saved to /root/loot/handshakes/ — use WPA Crack to crack them</p>
+      <button class="btn btn-blue btn-sm" onclick="loadCapLoot()">&#9670; Refresh</button>
+      <div id="cap-loot" style="margin-top:8px;font-size:11px;color:var(--green)">Click Refresh to check</div>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-crack" class="page hidden">
+    <div class="panel"><div class="panel-title">WPA CRACK</div><div class="panel-body">
+      <div class="form-row"><label>Cap File <span style="color:var(--dim);font-size:10px">(from loot — includes /root/loot/handshakes)</span></label>
+        <select id="crack-cap" style="margin-bottom:4px"></select>
+        <input id="crack-cap-manual" placeholder="or enter path manually..." style="font-size:11px;margin-top:3px"></div>
+      <div class="form-row"><label>Wordlist</label><select id="crack-wl"></select></div>
+      <button class="btn btn-red" onclick="doCrack()">&#9670; Crack</button>
+      <button class="btn btn-blue" onclick="loadCrackSelects()" style="margin-left:8px">&#9670; Refresh Files</button>
+      <button class="btn btn-yellow" onclick="stop('crack')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">OUTPUT</div><div class="panel-body">
+      <pre class="out" id="crack-out" style="min-height:60px">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-pmkid" class="page hidden">
+    <div class="panel"><div class="panel-title">PMKID CAPTURE</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Clientless WPA2 attack — no connected client needed.</p>
+      <div class="form-row"><label>BSSID</label><input id="pmkid-bssid" placeholder="AA:BB:CC:DD:EE:FF"></div>
+      <div class="form-row"><label>Channel</label><input id="pmkid-ch" value="6" style="width:80px"></div>
+      <button class="btn btn-red" onclick="doPmkid()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('pmkid')" style="margin-left:8px">&#9632; Stop</button>
+      <p id="pmkid-status" style="color:var(--dim);margin-top:8px"></p>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-evil-twin" class="page hidden">
+    <div class="panel"><div class="panel-title">EVIL TWIN</div><div class="panel-body">
+      <div class="form-row"><label>SSID to Clone</label><input id="et-ssid" placeholder="TargetNetwork"></div>
+      <div class="form-row"><label>Channel</label><input id="et-ch" value="6" style="width:80px"></div>
+      <div class="form-row"><label>Portal</label><select id="et-portal"><option value="">-- None --</option></select></div>
+      <button class="btn btn-red" onclick="doEvilTwin()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('evil_twin')" style="margin-left:8px">&#9632; Stop</button>
+      <p id="et-status" style="color:var(--dim);margin-top:8px"></p>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-karma" class="page hidden">
+    <div class="panel"><div class="panel-title">KARMA ATTACK</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Responds to all probe requests, luring devices to connect.</p>
+      <div class="form-row"><label>Channel</label><input id="karma-ch" value="6" style="width:80px"></div>
+      <button class="btn btn-red" onclick="doKarma()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('karma')" style="margin-left:8px">&#9632; Stop</button>
+      <p id="karma-status" style="color:var(--dim);margin-top:8px"></p>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-beacon" class="page hidden">
+    <div class="panel"><div class="panel-title">BEACON FLOOD</div><div class="panel-body">
+      <div class="form-row"><label>SSIDs (one per line)</label>
+        <textarea id="beacon-ssids" rows="6" placeholder="Free WiFi
+Starbucks
+ATT WiFi
+xfinitywifi"></textarea></div>
+      <button class="btn btn-orange" onclick="doBeacon()">&#9670; Start</button>
+      <button class="btn btn-blue" onclick="loadBeaconFromScan()" style="margin-left:8px">&#9670; Load from Scan</button>
+      <button class="btn btn-yellow" onclick="stop('beacon_flood')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-probe" class="page hidden">
+    <div class="panel"><div class="panel-title">PROBE HARVEST</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Captures what SSIDs nearby devices are searching for.</p>
+      <div class="form-row"><label>Duration (s)</label><input id="probe-dur" value="60" style="width:80px"></div>
+      <button class="btn btn-blue" onclick="doProbe()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('probe_harvest')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULTS</div><div class="panel-body">
+      <div class="rbox" id="probe-results">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-auth-flood" class="page hidden">
+    <div class="panel"><div class="panel-title">AUTH FLOOD (AP DoS)</div><div class="panel-body">
+      <div class="form-row"><label>BSSID</label><input id="af-bssid" placeholder="AA:BB:CC:DD:EE:FF"></div>
+      <div class="form-row"><label>Channel</label><input id="af-ch" value="6" style="width:80px"></div>
+      <button class="btn btn-red" onclick="doAuthFlood()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('auth_flood')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-wps" class="page hidden">
+    <div class="panel"><div class="panel-title">WPS SCAN</div><div class="panel-body">
+      <button class="btn btn-blue" onclick="doWps()">&#9670; Scan</button>
+      <span id="wps-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">WPS APs</div><div class="panel-body">
+      <table><thead><tr><th>BSSID</th><th>CH</th><th>RSSI</th><th>WPS Info</th><th>SSID</th></tr></thead>
+      <tbody id="wps-body"><tr><td colspan="6" style="color:var(--dim)">Not scanned</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <div id="page-wifi-chanhop" class="page hidden">
+    <div class="panel"><div class="panel-title">CHANNEL HOP</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Cycles through channels for passive discovery.</p>
+      <div class="form-row"><label>Band</label>
+        <select id="hop-band" style="width:120px"><option value="2">2.4 GHz</option><option value="5">5 GHz</option><option value="6">6 GHz</option><option value="all">All bands</option></select></div>
+      <button class="btn btn-blue" onclick="doChanHop()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('channel_hop')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+  </div>
+
+  <div id="page-lan-arp" class="page hidden">
+    <div class="panel"><div class="panel-title">ARP SCAN</div><div class="panel-body">
+      <div class="form-row"><label>Subnet</label><input id="arp-subnet" value="172.16.52.0/24"></div>
+      <button class="btn btn-green" onclick="doArp()">&#9670; Scan</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">HOSTS <span id="arp-count" style="color:var(--dim)"></span></div><div class="panel-body">
+      <table><thead><tr><th>IP</th><th>MAC</th><th>Vendor</th><th>Actions</th></tr></thead>
+      <tbody id="arp-body"><tr><td colspan="4" style="color:var(--dim)">Run scan</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <div id="page-lan-ping" class="page hidden">
+    <div class="panel"><div class="panel-title">PING SWEEP</div><div class="panel-body">
+      <div class="form-row"><label>Subnet</label><input id="ping-subnet" value="172.16.52.0/24"></div>
+      <button class="btn btn-green" onclick="doPing()">&#9670; Sweep</button>
+      <span id="ping-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">LIVE HOSTS</div><div class="panel-body">
+      <div class="rbox" id="ping-results">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-lan-portscan" class="page hidden">
+    <div class="panel"><div class="panel-title">PORT SCAN</div><div class="panel-body">
+      <div class="form-row"><label>Target IP</label><input id="ps-target" placeholder="172.16.52.100"></div>
+      <div class="form-row"><label>Ports</label><input id="ps-ports" value="1-1024" style="width:120px"></div>
+      <button class="btn btn-blue" onclick="doPort()">&#9670; Scan</button>
+      <button class="btn btn-orange" onclick="doServiceScan()" style="margin-left:8px">&#9670; Full Service Scan</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULTS</div><div class="panel-body">
+      <pre class="out" id="ps-out">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-lan-servicescan" class="page hidden">
+    <div class="panel"><div class="panel-title">SERVICE SCAN (nmap -sV -sC -p-)</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Full version detection + scripts. Slow but thorough.</p>
+      <div class="form-row"><label>Target IP</label><input id="ss-target" placeholder="172.16.52.100"></div>
+      <button class="btn btn-blue" onclick="doServiceScanPage()">&#9670; Start</button>
+      <span id="ss-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">OUTPUT</div><div class="panel-body">
+      <pre class="out" id="ss-out">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-lan-os" class="page hidden">
+    <div class="panel"><div class="panel-title">OS DETECTION</div><div class="panel-body">
+      <div class="form-row"><label>Target IP</label><input id="os-target" placeholder="172.16.52.100"></div>
+      <button class="btn btn-blue" onclick="doOs()">&#9670; Detect</button>
+      <span id="os-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULT</div><div class="panel-body">
+      <pre class="out" id="os-out">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-lan-banner" class="page hidden">
+    <div class="panel"><div class="panel-title">BANNER GRAB</div><div class="panel-body">
+      <div class="form-row"><label>Target IP</label><input id="banner-target" placeholder="172.16.52.100"></div>
+      <button class="btn btn-blue" onclick="doBanner()">&#9670; Grab</button>
+      <span id="banner-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">BANNERS</div><div class="panel-body">
+      <table><thead><tr><th>Port</th><th>Banner</th></tr></thead>
+      <tbody id="banner-body"><tr><td colspan="2" style="color:var(--dim)">Waiting...</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <div id="page-lan-creds" class="page hidden">
+    <div class="panel"><div class="panel-title">DEFAULT CREDENTIAL SPRAY</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Tries common credentials against HTTP basic auth and login forms.</p>
+      <div class="form-row"><label>Target IP</label><input id="cred-target" placeholder="192.168.1.1"></div>
+      <button class="btn btn-orange" onclick="doCreds()">&#9670; Spray</button>
+      <span id="cred-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">FOUND CREDENTIALS</div><div class="panel-body">
+      <div class="rbox" id="cred-results">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-lan-ssh" class="page hidden">
+    <div class="panel"><div class="panel-title">SSH BRUTE FORCE</div><div class="panel-body">
+      <div class="form-row"><label>Target IP</label><input id="ssh-target" placeholder="172.16.52.100"></div>
+      <div class="form-row"><label>Port</label><input id="ssh-port" value="22" style="width:80px"></div>
+      <button class="btn btn-red" onclick="doSsh()">&#9670; Start</button>
+      <span id="ssh-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULTS</div><div class="panel-body">
+      <div class="rbox" id="ssh-results">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-lan-smb" class="page hidden">
+    <div class="panel"><div class="panel-title">SMB ENUMERATION</div><div class="panel-body">
+      <div class="form-row"><label>Target IP</label><input id="smb-target" placeholder="172.16.52.100"></div>
+      <button class="btn btn-blue" onclick="doSmb()">&#9670; Enumerate</button>
+      <span id="smb-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">OUTPUT</div><div class="panel-body">
+      <pre class="out" id="smb-out">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-lan-snmp" class="page hidden">
+    <div class="panel"><div class="panel-title">SNMP WALK</div><div class="panel-body">
+      <div class="form-row"><label>Target IP</label><input id="snmp-target" placeholder="172.16.52.100"></div>
+      <div class="form-row"><label>Community</label><input id="snmp-comm" value="public" style="width:140px"></div>
+      <button class="btn btn-blue" onclick="doSnmp()">&#9670; Walk</button>
+      <span id="snmp-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">OUTPUT</div><div class="panel-body">
+      <pre class="out" id="snmp-out">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-lan-ssl" class="page hidden">
+    <div class="panel"><div class="panel-title">SSL CERTIFICATE</div><div class="panel-body">
+      <div class="form-row"><label>Target</label><input id="ssl-target" placeholder="192.168.1.1"></div>
+      <div class="form-row"><label>Port</label><input id="ssl-port" value="443" style="width:80px"></div>
+      <button class="btn btn-blue" onclick="doSsl()">&#9670; Grab Cert</button>
+      <span id="ssl-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">CERTIFICATE</div><div class="panel-body">
+      <div class="rbox" id="ssl-out">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-lan-mdns" class="page hidden">
+    <div class="panel"><div class="panel-title">mDNS / SSDP DISCOVERY</div><div class="panel-body">
+      <button class="btn btn-blue" onclick="doMdns()">&#9670; Discover</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">DEVICES</div><div class="panel-body">
+      <table><thead><tr><th>IP</th><th>Protocol</th><th>Server</th></tr></thead>
+      <tbody id="mdns-body"><tr><td colspan="3" style="color:var(--dim)">Not scanned</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <div id="page-lan-dns-spoof" class="page hidden">
+    <div class="panel"><div class="panel-title">DNS SPOOF</div><div class="panel-body">
+      <div class="form-row"><label>Domain</label><input id="dns-domain" placeholder="example.com"></div>
+      <div class="form-row"><label>Redirect IP</label><input id="dns-redirect" placeholder="10.0.0.1"></div>
+      <button class="btn btn-red" onclick="doDnsSpoof()">&#9670; Add Entry</button>
+    </div></div>
+  </div>
+
+  <div id="page-lan-http" class="page hidden">
+    <div class="panel"><div class="panel-title">HTTP INTERCEPT</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Redirects port 80 to intercept server. Captures GET/POST.</p>
+      <div class="form-row"><label>Interface</label><input id="http-iface" value="wlan0" style="width:100px"></div>
+      <button class="btn btn-red" onclick="doHttpInt()">&#9670; Start</button>
+      <button class="btn btn-yellow" onclick="stop('http_intercept')" style="margin-left:8px">&#9632; Stop</button>
+    </div></div>
+  </div>
+
+  <div id="page-osint-mac" class="page hidden">
+    <div class="panel"><div class="panel-title">MAC VENDOR LOOKUP</div><div class="panel-body">
+      <div class="form-row"><label>MAC Address</label><input id="mac-addr" placeholder="AA:BB:CC:DD:EE:FF"></div>
+      <button class="btn btn-purple" onclick="doMac()">&#9670; Lookup</button>
+      <button class="btn btn-blue" onclick="macFromScan()" style="margin-left:8px">&#9670; Lookup All from Scan</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULT</div><div class="panel-body">
+      <div class="rbox" id="mac-result">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-osint-ipgeo" class="page hidden">
+    <div class="panel"><div class="panel-title">IP GEOLOCATION</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Requires internet access from the Pineapple.</p>
+      <div class="form-row"><label>IP Address</label><input id="geo-ip" placeholder="8.8.8.8"></div>
+      <button class="btn btn-purple" onclick="doGeo()">&#9670; Geolocate</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULT</div><div class="panel-body">
+      <div class="rbox" id="geo-result">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-osint-whois" class="page hidden">
+    <div class="panel"><div class="panel-title">WHOIS</div><div class="panel-body">
+      <div class="form-row"><label>Domain or IP</label><input id="whois-target" placeholder="example.com"></div>
+      <button class="btn btn-purple" onclick="doWhois()">&#9670; Query</button>
+      <span id="whois-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULT</div><div class="panel-body">
+      <pre class="out" id="whois-out">Waiting...</pre>
+    </div></div>
+  </div>
+
+  <div id="page-osint-dns" class="page hidden">
+    <div class="panel"><div class="panel-title">DNS ENUMERATION</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Queries A/AAAA/MX/NS/TXT/CNAME/SOA. Attempts zone transfer.</p>
+      <div class="form-row"><label>Domain</label><input id="dns-enum-d" placeholder="example.com"></div>
+      <button class="btn btn-purple" onclick="doDnsEnum()">&#9670; Enumerate</button>
+      <span id="dns-enum-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">RECORDS</div><div class="panel-body">
+      <div class="rbox" id="dns-enum-out">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-osint-dnsbrute" class="page hidden">
+    <div class="panel"><div class="panel-title">SUBDOMAIN BRUTE FORCE</div><div class="panel-body">
+      <div class="form-row"><label>Domain</label><input id="dnsb-d" placeholder="example.com"></div>
+      <button class="btn btn-purple" onclick="doDnsBrute()">&#9670; Start</button>
+      <span id="dnsb-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">FOUND</div><div class="panel-body">
+      <table><thead><tr><th>Subdomain</th><th>IP</th></tr></thead>
+      <tbody id="dnsb-body"><tr><td colspan="2" style="color:var(--dim)">Waiting...</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <div id="page-osint-wifigeo" class="page hidden">
+    <div class="panel"><div class="panel-title">WIFI GEOLOCATION</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Uses Mozilla Location Service with scanned BSSIDs. Run AP scan first.</p>
+      <button class="btn btn-purple" onclick="doWifiGeo()">&#9670; Geolocate from Scan</button>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULT</div><div class="panel-body">
+      <div class="rbox" id="wgeo-result">Run AP scan first, then click Geolocate.</div>
+    </div></div>
+  </div>
+
+  <div id="page-osint-http" class="page hidden">
+    <div class="panel"><div class="panel-title">HTTP FINGERPRINTING</div><div class="panel-body">
+      <div class="form-row"><label>Target IP or Domain</label><input id="hfp-target" placeholder="192.168.1.1"></div>
+      <div class="form-row"><label>Port</label><input id="hfp-port" value="80" style="width:80px"></div>
+      <button class="btn btn-purple" onclick="doHttpFp()">&#9670; Fingerprint</button>
+      <span id="hfp-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">RESULT</div><div class="panel-body">
+      <div class="rbox" id="hfp-out">Waiting...</div>
+    </div></div>
+  </div>
+
+  <div id="page-osint-sysrecon" class="page hidden">
+    <div class="panel"><div class="panel-title">SYSTEM RECON</div><div class="panel-body">
+      <p style="color:var(--dim);margin-bottom:10px">Interfaces, connected clients, routes, disk, processes, nftables, DHCP leases.</p>
+      <button class="btn btn-purple" onclick="doSysRecon()">&#9670; Run Recon</button>
+      <span id="sr-status" style="color:var(--dim);margin-left:10px"></span>
+    </div></div>
+    <div class="panel"><div class="panel-title">INTERFACES</div><div class="panel-body"><pre class="out" id="sr-iface">-</pre></div></div>
+    <div class="panel"><div class="panel-title">CLIENTS (br-lan / br-evil)</div><div class="panel-body"><pre class="out" id="sr-clients">-</pre></div></div>
+    <div class="panel"><div class="panel-title">DHCP LEASES</div><div class="panel-body"><pre class="out" id="sr-leases">-</pre></div></div>
+    <div class="panel"><div class="panel-title">NFTABLES</div><div class="panel-body"><pre class="out" id="sr-nft">-</pre></div></div>
+  </div>
+
+  <div id="page-loot" class="page hidden">
+    <div class="panel"><div class="panel-title">LOOT MANAGER</div><div class="panel-body">
+      <button class="btn btn-blue" onclick="loadLoot()">&#9670; Refresh</button>
+      <button class="btn btn-red" onclick="deleteAllLoot()" style="margin-left:8px">&#9249; Delete All</button>
+      <div id="loot-filter-bar" style="margin-top:10px;display:flex;flex-wrap:wrap;gap:5px"></div>
+    </div></div>
+    <div class="panel"><div class="panel-title">FILES</div><div class="panel-body">
+      <table><thead><tr><th>File</th><th>Category</th><th>Size</th><th>Modified</th><th>DL</th><th>Del</th></tr></thead>
+      <tbody id="loot-body"><tr><td colspan="6" style="color:var(--dim)">No loot yet</td></tr></tbody></table>
+    </div></div>
+  </div>
+
+  <div id="page-terminal" class="page hidden">
+    <div class="panel" style="height:calc(100vh - 220px);display:flex;flex-direction:column">
+      <div class="panel-title" style="display:flex;align-items:center;justify-content:space-between">
+        <span>&#9654; TERMINAL</span>
+        <span style="font-size:11px;color:var(--dim)">
+          <button class="btn btn-yellow btn-sm" onclick="termClear()">Clear</button>
+          &nbsp;
+          <button class="btn btn-blue btn-sm" onclick="termToggleLive()">Live Log: <span id="term-live-status">ON</span></button>
+          &nbsp;
+          <button class="btn btn-red btn-sm" onclick="termKillAll()">Kill All Jobs</button>
+        </span>
+      </div>
+      <div id="term-out" style="flex:1;overflow-y:auto;padding:10px;font-size:12px;line-height:1.5;background:#020208;font-family:monospace;white-space:pre-wrap;word-break:break-all"></div>
+      <div style="display:flex;border-top:1px solid #222;background:#03030a">
+        <span style="color:var(--title);padding:8px 10px;font-size:13px">&#9658;</span>
+        <input id="term-input" style="flex:1;background:transparent;border:none;color:var(--green);font-size:13px;padding:6px 4px;outline:none;font-family:monospace" placeholder="enter command..." autocomplete="off" spellcheck="false" onkeydown="if(event.key==='Enter'){termRun();}else if(event.key==='ArrowUp'){event.preventDefault();if(_cmdHistory.length){_cmdHistIdx=_cmdHistIdx<0?_cmdHistory.length-1:Math.max(0,_cmdHistIdx-1);this.value=_cmdHistory[_cmdHistIdx]||'';}}else if(event.key==='ArrowDown'){event.preventDefault();if(_cmdHistIdx>=0){_cmdHistIdx++;this.value=_cmdHistIdx<_cmdHistory.length?_cmdHistory[_cmdHistIdx]:'';if(_cmdHistIdx>=_cmdHistory.length)_cmdHistIdx=-1;}}">
+        <button class="btn btn-green btn-sm" style="margin:4px 8px" onclick="termRun()">Run</button>
+      </div>
+    </div>
+  </div>
+
+
+  </div>
+  <div id="log-bar"><div id="log-entries"></div></div>
+</div></div>
+
+<script src="/pagersploit.js"></script><script>
+function toggleSidebar(){
+  var s=document.getElementById('sidebar');
+  var o=document.getElementById('sidebar-overlay');
+  s.classList.toggle('open');
+  o.classList.toggle('open');
+}
+// Close sidebar when a nav item is clicked on mobile
+document.addEventListener('DOMContentLoaded',function(){
+  var items=document.querySelectorAll('.nav-item');
+  items.forEach(function(el){
+    el.addEventListener('click',function(){
+      if(window.innerWidth<=700){
+        document.getElementById('sidebar').classList.remove('open');
+        document.getElementById('sidebar-overlay').classList.remove('open');
+      }
+    });
+  });
+});
+</script>
+</body></html>
