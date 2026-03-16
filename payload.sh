@@ -76,64 +76,59 @@ mkdir -p "$PAYLOAD_DIR/loot/handshakes" \
          "$PAYLOAD_DIR/lib" 2>/dev/null
 
 # -- Dependencies --------------------------------------------------------------
-LOG "cyan" "Optimizing system for PagerSploit..."
+LOG "cyan" "Initializing PagerSploit environment..."
 
-# 1. Add Reliable Official OpenWrt Feeds (23.05 is stable for Pager arch)
-if ! grep -q "openwrt_base" /etc/opkg/customfeeds.conf 2>/dev/null; then
-    echo "src/gz openwrt_base https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/base" >> /etc/opkg/customfeeds.conf
-    echo "src/gz openwrt_packages https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/packages" >> /etc/opkg/customfeeds.conf
-    LOG "cyan" "Added official OpenWrt repositories"
-fi
-
-# 2. Fix common library issues (libcap version mismatch)
-if [ ! -f /usr/lib/libcap.so.0.8 ]; then
-    ln -s /usr/lib/libcap.so.2 /usr/lib/libcap.so.0.8 2>/dev/null
-    LOG "cyan" "Applied libcap compatibility fix"
-fi
-
-LOG "cyan" "Updating package list (this may take a moment)..."
-opkg update >/dev/null 2>&1
-
-# 3. Install Base Libraries (Required for WiFi tools)
-LOG "cyan" "Installing base libraries..."
-opkg install libpcap libnl-tiny libpthread libstdcpp6 >/dev/null 2>&1
-
-# 4. Function to check and install
-check_dep() {
-    local tool=$1
-    local pkg=$2
-    if ! command -v "$tool" >/dev/null 2>&1; then
-        LOG "yellow" "Installing $pkg..."
-        opkg install "$pkg" >/dev/null 2>&1
-        if ! command -v "$tool" >/dev/null 2>&1; then
-            # Special case for mdk4 which is often broken in feeds
-            if [ "$tool" == "mdk4" ]; then
-                LOG "yellow" "Feed mdk4 failed. Attempting direct download..."
-                wget -q https://github.com/adde88/openwrt-useful-tools/raw/packages-19.07_mkvii/mdk4_4.1-9_mipsel_24kc.ipk -O /tmp/mdk4.ipk
-                opkg install /tmp/mdk4.ipk >/dev/null 2>&1
-            fi
-        fi
-        
-        if command -v "$tool" >/dev/null 2>&1; then
-            LOG "green" "Successfully installed $tool"
-        else
-            LOG "red" "Warning: $tool could not be installed."
-        fi
+# 1. Check for Internet (Skip installation if offline to prevent hanging/crashes)
+if ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1; then
+    LOG "green" "Internet detected. Checking for updates..."
+    
+    # 2. Add Official & Stable Feeds
+    if ! grep -q "openwrt_base" /etc/opkg/customfeeds.conf 2>/dev/null; then
+        echo "src/gz openwrt_base https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/base" >> /etc/opkg/customfeeds.conf
+        echo "src/gz openwrt_packages https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/packages" >> /etc/opkg/customfeeds.conf
     fi
-}
 
-# Core Tools
-check_dep "nmap" "nmap"
-check_dep "mdk4" "mdk4"
-check_dep "reaver" "reaver"
-check_dep "bully" "bully"
-check_dep "aircrack-ng" "aircrack-ng"
-check_dep "hcitool" "bluez-utils"
+    # 3. Fix common library issues (libcap version mismatch)
+    [ ! -f /usr/lib/libcap.so.0.8 ] && ln -s /usr/lib/libcap.so.2 /usr/lib/libcap.so.0.8 2>/dev/null
 
-# Python Libraries
-if ! python3 -c "import sqlite3" >/dev/null 2>&1; then
-    LOG "yellow" "Installing python3-sqlite3..."
-    opkg install python3-sqlite3 >/dev/null 2>&1
+    # 4. Install critical libraries to MMC (Prevents internal memory exhaustion)
+    opkg update >/dev/null 2>&1
+    opkg install -d mmc libpcap libnl-tiny libstdcpp6 >/dev/null 2>&1
+
+    # 5. Robust installation for problematic tools
+    install_to_mmc() {
+        local tool=$1
+        local pkg=$2
+        local url=$3
+        if ! command -v "$tool" >/dev/null 2>&1; then
+            LOG "yellow" "Installing $tool..."
+            # Try feed first
+            opkg install -d mmc "$pkg" >/dev/null 2>&1
+            # Try direct download if feed failed or is empty
+            if ! command -v "$tool" >/dev/null 2>&1 && [ -n "$url" ]; then
+                LOG "yellow" "Feed $tool failed. Attempting direct build..."
+                wget -q "$url" -O "/tmp/$tool.ipk"
+                opkg install -d mmc "/tmp/$tool.ipk" >/dev/null 2>&1
+                rm -f "/tmp/$tool.ipk"
+            fi
+            [ -x "$(command -v $tool)" ] && LOG "green" "Verified $tool" || LOG "red" "$tool skipped"
+        fi
+    }
+
+    install_to_mmc "nmap" "nmap"
+    install_to_mmc "mdk4" "mdk4" "https://github.com/adde88/openwrt-useful-tools/raw/packages-21.02_mkvii/mdk4_4.2-5_mipsel_24kc.ipk"
+    install_to_mmc "bully" "bully" "https://github.com/adde88/openwrt-useful-tools/raw/packages-21.02_mkvii/bully_1.4-1_mipsel_24kc.ipk"
+    install_to_mmc "reaver" "reaver"
+    install_to_mmc "aircrack-ng" "aircrack-ng"
+    
+    # Python Library
+    if ! python3 -c "import sqlite3" >/dev/null 2>&1; then
+        LOG "yellow" "Installing sqlite3 library..."
+        opkg install -d mmc python3-sqlite3 >/dev/null 2>&1
+    fi
+else
+    LOG "yellow" "Offline Mode: Skipping tool installation."
+    LOG "dim" "Connect Pager to internet via USB-C to auto-install tools."
 fi
 
 # -- Stop services -------------------------------------------------------------
