@@ -27,32 +27,34 @@ STATE = {
 }
 STATE_LOCK = threading.Lock()
 
-NMAP_PATH  = '/mmc/root/payloads/user/reconnaissance/pager_bjorn/lib/nmap'
-AIR_PATH   = '/mmc/usr/sbin'
-AC_PATH    = '/mmc/usr/bin/aircrack-ng'
+# ── Binary Discovery ──────────────────────────────────────────────────────
+def find_bin(name, extra_paths=None):
+    """Find a binary in the system path or extra locations."""
+    import shutil
+    # Check PATH first
+    b = shutil.which(name)
+    if b: return b
+    # Check common Pineapple-specific extra paths
+    extras = extra_paths or []
+    extras += [
+        '/mmc/usr/bin', '/mmc/usr/sbin', '/mmc/bin', '/mmc/sbin',
+        '/usr/bin', '/usr/sbin', '/bin', '/sbin',
+        '/mmc/root/payloads/user/reconnaissance/pager_bjorn/lib',
+        '/root/payloads/user/reconnaissance/pager_bjorn/lib'
+    ]
+    for p in extras:
+        full = os.path.join(p, name)
+        if os.path.exists(full) and os.access(full, os.X_OK):
+            return full
+    return name # Fallback to name and hope for the best
+
+NMAP_PATH  = find_bin('nmap')
+AIR_PATH   = find_bin('aircrack-ng') # Note: function expects directory for AIR_PATH in some old scripts, but here we use the binary
+AC_PATH    = find_bin('aircrack-ng')
 MON_IFACE  = 'wlan0mon'
 MON2_IFACE = 'wlan1mon'
 
-def log(msg, level='info'):
-    entry = {'time': datetime.now().strftime('%H:%M:%S'), 'level': level, 'msg': str(msg)}
-    with STATE_LOCK:
-        STATE['log'].append(entry)
-        if len(STATE['log']) > 1000: STATE['log'] = STATE['log'][-1000:]
-    print(f"[{entry['time']}] {msg}", flush=True)
-
-def set_module(name, status='Running'):
-    with STATE_LOCK:
-        STATE['active_module'] = name
-        STATE['module_status'] = status
-
-def set_data(key, val):
-    with STATE_LOCK: STATE['module_data'][key] = val
-
-def get_data(key, default=None):
-    with STATE_LOCK: return STATE['module_data'].get(key, default)
-
-def get_payload_dir(): return STATE['payload_dir']
-def nmap_bin(): return NMAP_PATH if os.path.exists(NMAP_PATH) else 'nmap'
+def nmap_bin(): return NMAP_PATH
 
 def run_cmd(cmd, timeout=60):
     try:

@@ -1,20 +1,40 @@
 #!/bin/bash
-# Title: PagerSploit
-# Description: Full wireless pentest framework with browser-based UI. Connect via USB-C or management AP at 172.16.52.1:8080. WiFi attacks, LAN recon, credential capture, handshake cracking, evil portal, and live loot — all from your phone.
-# Author: wickedNull
-# Version: 1.0
-# Category: Interception
+# TITLE: PagerSploit
+# DESCRIPTION: Wireless Pentest Framework with Browser UI.
+# AUTHOR: wickedNull
+# VERSION: 2.1
+# CATEGORY: Interception
 
-PAYLOAD_DIR="/root/payloads/user/interception/PagerSploit"
+# Source Pineapple functions for Pager-native commands
+if [ -f /lib/pineapple/functions ]; then
+    source /lib/pineapple/functions
+elif [ -f /etc/pineapple/functions ]; then
+    source /etc/pineapple/functions
+fi
+
+# Dynamic Payload Directory
+PAYLOAD_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)
 LOG_FILE="/tmp/pagersploit.log"
 SERVER_IP="172.16.52.1"
 SERVER_PORT="8080"
+
+# -- Cleanup function ----------------------------------------------------------
+function finish() {
+    LOG "Restoring services..."
+    /etc/init.d/bluetoothd     start 2>/dev/null &
+    /etc/init.d/nginx          start 2>/dev/null &
+    /etc/init.d/php8-fpm       start 2>/dev/null &
+    /etc/init.d/pineapplepager start 2>/dev/null &
+    VIBRATE
+}
+trap finish EXIT
 
 # -- Find pagerctl -------------------------------------------------------------
 PAGERCTL_FOUND=false
 for dir in "$PAYLOAD_DIR/lib" \
            "/root/payloads/user/utilities/PAGERCTL" \
-           "/mmc/root/payloads/user/utilities/PAGERCTL"; do
+           "/mmc/root/payloads/user/utilities/PAGERCTL" \
+           "/root/payloads/user/General/PAGERCTL"; do
     if [ -f "$dir/libpagerctl.so" ] && [ -f "$dir/pagerctl.py" ]; then
         PAGERCTL_DIR="$dir"
         PAGERCTL_FOUND=true
@@ -23,17 +43,14 @@ for dir in "$PAYLOAD_DIR/lib" \
 done
 
 if [ "$PAGERCTL_FOUND" = false ]; then
-    LOG "red" "libpagerctl.so / pagerctl.py not found!"
-    LOG "Install PAGERCTL utility or copy files to:"
-    LOG "  $PAYLOAD_DIR/lib/"
-    WAIT_FOR_INPUT >/dev/null 2>&1
+    ERROR_DIALOG "PAGERCTL not found! Please install it via the Pager UI or copy pagerctl.py/libpagerctl.so to PagerSploit/lib/"
     exit 1
 fi
 
 if [ "$PAGERCTL_DIR" != "$PAYLOAD_DIR/lib" ]; then
-    mkdir -p "$PAYLOAD_DIR/lib" 2>/dev/null
-    cp "$PAGERCTL_DIR/libpagerctl.so" "$PAYLOAD_DIR/lib/" 2>/dev/null
-    cp "$PAGERCTL_DIR/pagerctl.py"    "$PAYLOAD_DIR/lib/" 2>/dev/null
+    mkdir -p "$PAYLOAD_DIR/lib"
+    cp "$PAGERCTL_DIR/libpagerctl.so" "$PAYLOAD_DIR/lib/"
+    cp "$PAGERCTL_DIR/pagerctl.py"    "$PAYLOAD_DIR/lib/"
 fi
 
 export PATH="/mmc/usr/bin:/mmc/usr/sbin:$PAYLOAD_DIR/bin:$PATH"
@@ -43,28 +60,10 @@ export PYTHONPATH="$PAYLOAD_DIR/lib:$PAYLOAD_DIR:$PYTHONPATH"
 PYTHON=$(command -v python3)
 
 # -- Splash --------------------------------------------------------------------
-LOG ""
-LOG "cyan"  "  ░░ P A G E R S P L O I T ░░"
-LOG ""
-LOG "white" "Pentest Framework // WiFi Pineapple Pager"
-LOG ""
-LOG "green" "UI at: http://$SERVER_IP:$SERVER_PORT"
-LOG "cyan"  "Connect via USB-C ethernet or management AP"
-LOG ""
-LOG "green" "GREEN = Launch"
-LOG "red"   "RED   = Exit"
-LOG ""
-
-while true; do
-    BUTTON=$(WAIT_FOR_INPUT 2>/dev/null)
-    case "$BUTTON" in
-        "GREEN"|"A") break ;;
-        "RED"|"B")
-            LOG "Exiting."
-            exit 0
-            ;;
-    esac
-done
+CONFIRMATION_DIALOG "PagerSploit" "Launch PagerSploit Framework?\n\nUI: http://$SERVER_IP:$SERVER_PORT"
+if [ $? -ne 0 ]; then
+    exit 0
+fi
 
 # -- Create directories --------------------------------------------------------
 mkdir -p "$PAYLOAD_DIR/loot/handshakes" \
@@ -73,22 +72,18 @@ mkdir -p "$PAYLOAD_DIR/loot/handshakes" \
          "$PAYLOAD_DIR/loot/pmkid" \
          "$PAYLOAD_DIR/wordlists" \
          "$PAYLOAD_DIR/portals" \
-         "$PAYLOAD_DIR/lib" 2>/dev/null
+         "$PAYLOAD_DIR/lib"
 
 # -- Stop services -------------------------------------------------------------
-SPINNER_ID=$(START_SPINNER "Initializing PagerSploit...")
-# Stop pineapplepager (display manager) to avoid screen conflict
-# but leave pineapd running so recon.db stays populated with tri-band data
+SPINNER "Initializing PagerSploit..."
 /etc/init.d/php8-fpm       stop 2>/dev/null
 /etc/init.d/nginx          stop 2>/dev/null
 /etc/init.d/bluetoothd     stop 2>/dev/null
 /etc/init.d/pineapplepager stop 2>/dev/null
-# pineapd keeps running — it owns recon.db and the radio hopping
 sleep 1
-sleep 0.5
-STOP_SPINNER "$SPINNER_ID" 2>/dev/null
 
 # -- Launch --------------------------------------------------------------------
+VIBRATE
 "$PYTHON" "$PAYLOAD_DIR/pagersploit.py" \
     --server-ip   "$SERVER_IP" \
     --server-port "$SERVER_PORT" \
@@ -96,20 +91,6 @@ STOP_SPINNER "$SPINNER_ID" 2>/dev/null
     > "$LOG_FILE" 2>&1
 
 EXIT_CODE=$?
-
 if [ $EXIT_CODE -ne 0 ]; then
-    LOG ""
-    LOG "red" "PagerSploit exited with error (code $EXIT_CODE)"
-    LOG "Check /tmp/pagersploit.log"
-    LOG ""
-    LOG "Press any button..."
-    WAIT_FOR_INPUT >/dev/null 2>&1
+    ERROR_DIALOG "PagerSploit exited with error $EXIT_CODE\nCheck $LOG_FILE"
 fi
-
-sleep 0.5
-
-# -- Restore services ----------------------------------------------------------
-/etc/init.d/bluetoothd     start 2>/dev/null &
-/etc/init.d/nginx          start 2>/dev/null &
-/etc/init.d/php8-fpm       start 2>/dev/null &
-/etc/init.d/pineapplepager start 2>/dev/null &
