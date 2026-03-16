@@ -151,6 +151,7 @@ pre.out{color:var(--green);font-size:11px;max-height:280px;overflow-y:auto;white
       <div class="panel"><div class="panel-title">STATUS</div><div class="panel-body">
         <table>
           <tr><td style="color:var(--dim)">Server</td><td id="d-ip" style="color:var(--green)">-</td></tr>
+          <tr><td style="color:var(--dim)">Health</td><td id="d-health" style="color:var(--green)">T: ? | U: ?</td></tr>
           <tr><td style="color:var(--dim)">Module</td><td id="d-mod" style="color:var(--orange)">idle</td></tr>
           <tr><td style="color:var(--dim)">Status</td><td id="d-status">-</td></tr>
           <tr><td style="color:var(--dim)">Jobs</td><td id="d-jobs" style="color:var(--yellow)">0</td></tr>
@@ -158,10 +159,10 @@ pre.out{color:var(--green);font-size:11px;max-height:280px;overflow-y:auto;white
         </table>
       </div></div>
       <div class="panel"><div class="panel-title">QUICK ACTIONS</div><div class="panel-body">
+        <button class="btn btn-red" style="width:100%;margin-bottom:6px" id="btn-walk" onclick="toggleWalk()">&#9670; WALK-MODE (AUTO-PWN)</button>
+        <button class="btn btn-green" style="width:100%;margin-bottom:6px" onclick="genReport()">&#9670; GENERATE REPORT</button>
         <button class="btn btn-blue" style="width:100%;margin-bottom:6px" onclick="show('wifi-scan');doScan()">&#9670; Scan APs</button>
         <button class="btn btn-blue" style="width:100%;margin-bottom:6px" onclick="show('lan-arp');doArp()">&#9670; ARP Scan LAN</button>
-        <button class="btn btn-purple" style="width:100%;margin-bottom:6px" onclick="show('osint-sysrecon');doSysRecon()">&#9670; System Recon</button>
-        <button class="btn btn-red" style="width:100%" onclick="stopAll()">&#9632; Stop All</button>
       </div></div>
     </div>
     <div class="panel"><div class="panel-title">LAST SCAN <span id="d-ap-count" style="color:var(--dim)"></span></div>
