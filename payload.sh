@@ -76,49 +76,65 @@ mkdir -p "$PAYLOAD_DIR/loot/handshakes" \
          "$PAYLOAD_DIR/lib" 2>/dev/null
 
 # -- Dependencies --------------------------------------------------------------
-LOG "cyan" "Checking dependencies..."
+LOG "cyan" "Optimizing system for PagerSploit..."
 
-# Function to check and install
+# 1. Add Reliable Official OpenWrt Feeds (23.05 is stable for Pager arch)
+if ! grep -q "openwrt_base" /etc/opkg/customfeeds.conf 2>/dev/null; then
+    echo "src/gz openwrt_base https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/base" >> /etc/opkg/customfeeds.conf
+    echo "src/gz openwrt_packages https://downloads.openwrt.org/releases/23.05.0/packages/mipsel_24kc/packages" >> /etc/opkg/customfeeds.conf
+    LOG "cyan" "Added official OpenWrt repositories"
+fi
+
+# 2. Fix common library issues (libcap version mismatch)
+if [ ! -f /usr/lib/libcap.so.0.8 ]; then
+    ln -s /usr/lib/libcap.so.2 /usr/lib/libcap.so.0.8 2>/dev/null
+    LOG "cyan" "Applied libcap compatibility fix"
+fi
+
+LOG "cyan" "Updating package list (this may take a moment)..."
+opkg update >/dev/null 2>&1
+
+# 3. Install Base Libraries (Required for WiFi tools)
+LOG "cyan" "Installing base libraries..."
+opkg install libpcap libnl-tiny libpthread libstdcpp6 >/dev/null 2>&1
+
+# 4. Function to check and install
 check_dep() {
     local tool=$1
     local pkg=$2
     if ! command -v "$tool" >/dev/null 2>&1; then
-        LOG "yellow" "Missing $tool. Installing $pkg..."
-        opkg update >/dev/null 2>&1
+        LOG "yellow" "Installing $pkg..."
         opkg install "$pkg" >/dev/null 2>&1
         if ! command -v "$tool" >/dev/null 2>&1; then
-            LOG "red" "Failed to install $pkg. Some modules may not work."
+            # Special case for mdk4 which is often broken in feeds
+            if [ "$tool" == "mdk4" ]; then
+                LOG "yellow" "Feed mdk4 failed. Attempting direct download..."
+                wget -q https://github.com/adde88/openwrt-useful-tools/raw/packages-19.07_mkvii/mdk4_4.1-9_mipsel_24kc.ipk -O /tmp/mdk4.ipk
+                opkg install /tmp/mdk4.ipk >/dev/null 2>&1
+            fi
+        fi
+        
+        if command -v "$tool" >/dev/null 2>&1; then
+            LOG "green" "Successfully installed $tool"
         else
-            LOG "green" "Installed $pkg"
+            LOG "red" "Warning: $tool could not be installed."
         fi
     fi
 }
 
-# Special check for python packages
-check_py_pkg() {
-    local pkg=$1
-    if ! python3 -c "import $pkg" >/dev/null 2>&1; then
-        LOG "yellow" "Missing python library $pkg. Installing..."
-        opkg update >/dev/null 2>&1
-        opkg install "python3-$pkg" >/dev/null 2>&1
-    fi
-}
-
-# Add community repo for advanced tools
-if ! grep -q "adde88" /etc/opkg/customfeeds.conf 2>/dev/null; then
-    echo "src/gz adde88_tools https://raw.githubusercontent.com/adde88/openwrt-useful-tools/master/packages/mkvii" >> /etc/opkg/customfeeds.conf
-    LOG "cyan" "Added adde88 community repository"
-fi
-
-# Install core tools
+# Core Tools
 check_dep "nmap" "nmap"
 check_dep "mdk4" "mdk4"
 check_dep "reaver" "reaver"
 check_dep "bully" "bully"
-check_dep "pixiewps" "pixiewps"
 check_dep "aircrack-ng" "aircrack-ng"
 check_dep "hcitool" "bluez-utils"
-check_py_pkg "sqlite3"
+
+# Python Libraries
+if ! python3 -c "import sqlite3" >/dev/null 2>&1; then
+    LOG "yellow" "Installing python3-sqlite3..."
+    opkg install python3-sqlite3 >/dev/null 2>&1
+fi
 
 # -- Stop services -------------------------------------------------------------
 SPINNER_ID=$(START_SPINNER "Initializing PagerSploit...")
