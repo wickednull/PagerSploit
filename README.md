@@ -191,14 +191,17 @@ Expected paths:
 
 # Credits
 
-**wickedNull**\
+**wickedNull**  
 Creator and lead developer
+https://github.com/wickednull
 
-**sinXne0**\
-Development support, testing, and collaboration
-
+**sinXne0**  
+Development support, testing, and collaboration  
 https://github.com/sinXne0
 
+**BrainPhreak**  
+Creator of `pagerctl` used for Pager hardware display integration  
+https://github.com/pineapple-pager-projects
 ------------------------------------------------------------------------
 
 # Disclaimer
