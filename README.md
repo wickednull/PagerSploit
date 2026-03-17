@@ -1,145 +1,218 @@
 # PagerSploit
 
-A wireless penetration testing framework for the [Hak5 WiFi Pineapple](https://hak5.org/products/wifi-pineapple). Modules run on the Pineapple — you control everything from a browser on your phone or laptop over USB-C ethernet.
+![Python](https://img.shields.io/badge/Python-3.x-blue)
+![Platform](https://img.shields.io/badge/Platform-WiFi%20Pineapple%20Pager-orange)
+![Status](https://img.shields.io/badge/Status-Active-green)
+![License](https://img.shields.io/badge/License-Research-lightgrey)
 
-**Built by [wickedNull](https://github.com/wickednull)**
+PagerSploit is a **browser‑controlled wireless penetration testing
+framework** designed specifically for the **Hak5 WiFi Pineapple Pager**.
 
----
+It runs a lightweight Python backend and exposes a web control panel
+that can be accessed directly from a phone or laptop over **USB‑C
+Ethernet**. This allows operators to control wireless attacks, monitor
+results, and manage captured data without SSH access.
 
-## How It Works
+PagerSploit also integrates with the **Pager hardware screen**,
+displaying module status and activity directly on the device.
 
-PagerSploit runs a web UI on `http://172.16.52.1:8080` — the Pineapple's always-up management bridge. Connect via USB-C ethernet, open your browser, and you have a full pentest dashboard. No need to SSH in to run attacks.
+------------------------------------------------------------------------
 
-The Pager display shows live module status so you know what's running at a glance without looking at your phone.
+# Dashboard
 
-```
-Operator (phone/laptop)
-        │
-    USB-C ethernet
-        │
-  172.16.52.1:8080  ◄── Browser UI
-  WiFi Pineapple
-        │
-  wlan0 / wlan0mon / wlan1mon
-        │
-     Target network
-```
+Access the interface at:
 
----
+http://172.16.52.1:8080
 
-## Install
+The dashboard provides real‑time control of all attack modules.
 
-```bash
+## Example UI
+
+Add screenshots here once available:
+
+    docs/screenshots/dashboard.png
+    docs/screenshots/wifi_scan.png
+    docs/screenshots/loot_manager.png
+
+------------------------------------------------------------------------
+
+# Architecture
+
+    Operator Device (Phone / Laptop)
+                │
+            USB‑C Ethernet
+                │
+         172.16.52.1:8080
+         PagerSploit Web UI
+                │
+          Python Backend
+                │
+      WiFi Pineapple Pager
+                │
+     wlan0 / wlan0mon / wlan1mon
+                │
+            Target Network
+
+The Python backend launches modules as **background jobs**, manages
+logs, and saves captured data to structured directories.
+
+------------------------------------------------------------------------
+
+# Features
+
+## Web Based Control
+
+-   Browser controlled attack interface
+-   Real‑time module status
+-   No SSH required for normal operation
+-   Works from mobile devices
+
+## Pager Hardware Integration
+
+-   Displays module status on the Pineapple Pager screen
+-   Uses `pagerctl` when available
+-   Fully functional even without hardware display
+
+## Job & Process Management
+
+-   Modules run as background tasks
+-   Clean stop signals
+-   Automatic logging
+-   Persistent attack sessions
+
+## Loot Management
+
+Captured data is automatically organized:
+
+    loot/
+    ├── handshakes/
+    ├── credentials/
+    ├── scans/
+    └── pmkid/
+
+The **Loot Manager** in the web UI allows files to be downloaded
+directly.
+
+------------------------------------------------------------------------
+
+# Modules
+
+## WiFi Modules
+
+  Module              Description
+  ------------------- -----------------------------------------------
+  AP Scanner          Detects nearby access points
+  Deauth              Disconnects clients from a target AP
+  Handshake Capture   Captures WPA handshakes
+  WPA Crack           Uses aircrack-ng to attempt password recovery
+  Evil Twin           Creates rogue access point
+  Karma Attack        Responds to probe requests
+  Beacon Flood        Broadcasts fake SSIDs
+  Probe Harvest       Collects probe request data
+  Auth Flood          Sends large authentication bursts
+  WPS Scan            Detects WPS enabled routers
+
+------------------------------------------------------------------------
+
+## LAN Modules
+
+  Module                     Description
+  -------------------------- ---------------------------------
+  ARP Scan                   Discovers devices on network
+  Port Scan                  Runs TCP scans using nmap
+  Default Credential Spray   Attempts common credentials
+  mDNS Discovery             Finds IoT devices
+  DNS Spoof                  Redirects domains using dnsmasq
+  HTTP Intercept             Captures plaintext HTTP traffic
+
+------------------------------------------------------------------------
+
+# Captive Portals
+
+Custom portals can be placed inside:
+
+    PagerSploit/portals/
+
+Example:
+
+    portals/
+    ├── hotel_wifi.html
+    ├── coffee_shop.html
+    └── custom_portal.html
+
+These portals will automatically appear in the **Evil Twin module**.
+
+------------------------------------------------------------------------
+
+# Installation
+
+Clone into the Pineapple payload directory:
+
+``` bash
 cd /root/payloads/user/interception
 git clone https://github.com/wickednull/PagerSploit
 chmod +x PagerSploit/payload.sh
 ```
 
-Run it from the Pager UI under **Interception → PagerSploit**, or:
+Launch from the Pineapple UI:
 
-```bash
+    Interception → PagerSploit
+
+Or start manually:
+
+``` bash
 bash /root/payloads/user/interception/PagerSploit/payload.sh
 ```
 
-Then open `http://172.16.52.1:8080` in your browser.
+Then open:
 
----
+    http://172.16.52.1:8080
 
-## Modules
+------------------------------------------------------------------------
 
-### WiFi
+# Requirements
 
-| Module | Description |
-|--------|-------------|
-| **AP Scanner** | Scan for nearby access points, display SSID / BSSID / channel / signal / encryption |
-| **Deauth** | Deauthenticate clients from a target AP (`wlan1mon`, continuous or fixed count) |
-| **Handshake Capture** | Put `wlan0mon` on target channel, capture WPA handshake, auto-detect with aircrack-ng |
-| **WPA Crack** | Run aircrack-ng against a captured `.cap` file with a wordlist |
-| **Evil Twin** | Clone a target SSID on `br-evil` (10.0.0.1), optionally serve a captive portal |
-| **Karma Attack** | Respond to all probe requests with a matching SSID via airbase-ng |
-| **Beacon Flood** | Flood beacon frames with a list of SSIDs |
-| **Probe Harvest** | Passive collection of probe requests — reveals SSIDs devices are looking for |
-| **Auth Flood** | Flood authentication frames at a target AP |
-| **WPS Scan** | Scan for WPS-enabled APs and report WPS version / locked status |
+Expected environment:
 
-### LAN
+-   WiFi Pineapple Pager
+-   Python 3
+-   aircrack-ng
+-   nmap
+-   dnsmasq
+-   nftables
 
-| Module | Description |
-|--------|-------------|
-| **ARP Scan** | Discover live hosts on a subnet |
-| **Port Scan** | nmap TCP scan against a target host |
-| **Default Cred Spray** | Try common default credentials against SSH, FTP, HTTP, Telnet |
-| **mDNS Discovery** | Passive mDNS listener — finds printers, cameras, IoT devices |
-| **DNS Spoof** | Redirect a domain to an IP via dnsmasq |
-| **HTTP Intercept** | Capture plaintext HTTP traffic on an interface |
+Expected paths:
 
----
+    /mmc/usr/sbin/
+    /mmc/usr/bin/python3
+    /mmc/root/payloads/
 
-## Captive Portals (Evil Twin)
+------------------------------------------------------------------------
 
-Drop any `.html` file into the `portals/` directory and it will appear as an option in the Evil Twin module. The file is served as a captive portal to clients who connect to the cloned AP.
+# Credits
 
-Compatible with Flipper Zero portal HTML files.
+**wickedNull**\
+Creator and lead developer
 
-```
-PagerSploit/
-└── portals/
-    ├── hotel_wifi.html
-    ├── coffee_shop.html
-    └── your_portal.html
-```
-
----
-
-## Loot
-
-All captured data is saved to `PagerSploit/loot/`:
-
-```
-loot/
-├── handshakes/     # .cap files from handshake capture
-├── credentials/    # HTTP intercept and default cred spray results
-├── scans/          # ARP, port scan, mDNS, probe harvest output
-└── pmkid/          # PMKID captures
-```
-
-The browser UI has a **Loot Manager** tab with download links for all captured files.
-
-Wordlists go in `PagerSploit/wordlists/` and will appear in the WPA Crack module.
-
----
-
-## Requirements
-
-- WiFi Pineapple (Pager)
-- aircrack-ng suite in `/mmc/usr/sbin/` (pre-installed on Pineapple)
-- nmap at `/mmc/root/payloads/user/reconnaissance/pager_bjorn/lib/nmap`
-- Python 3 at `/mmc/usr/bin/python3`
-- nftables (`nft`)
-
----
-
-Credits
-
-wickedNull
-Project creator and lead developer
-
-sinXne0
-Major development assistance, testing, and collaboration
+**sinXne0**\
+Development support, testing, and collaboration
 
 https://github.com/sinXne0
 
-⸻
+------------------------------------------------------------------------
 
-Disclaimer
+# Disclaimer
 
-PagerSploit is intended only for authorized penetration testing, research, and educational use.
+PagerSploit is intended for **authorized penetration testing and
+security research only**.
 
-The authors are not responsible for misuse of this software. Always obtain proper authorization before testing networks or devices.
+Unauthorized use against networks you do not own or have permission to
+test may violate laws.
 
-## Notes
+Use responsibly.
 
-- Deauth uses `wlan1mon` (5GHz monitor) by default to leave `wlan0mon` free for capture
-- The web UI polls every 2 seconds for live status updates
-- `br-evil` (10.0.0.1) is the dedicated evil AP bridge — already configured by the Pineapple
-- Stopping a module from the UI cleanly kills background processes and tears down nftables rules
+------------------------------------------------------------------------
+
+# License
+
+See repository license.
