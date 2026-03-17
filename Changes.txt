@@ -1,0 +1,31 @@
+PagerSploit — Update Summary                                                                         
+                                                                                                       
+  ---                                                       
+  What Was Fixed                                                                                       
+                                                            
+  1. Display Blinking (Root Cause)
+  The original code tried to suspend a process called pineapplepager to stop it from overwriting the
+  screen. That process doesn't exist on the device — the actual display processes are pineapple and
+  pineapd. Because the wrong name was searched, SIGSTOP was never sent, and those processes kept
+  drawing over PagerSploit's frames, causing the left side of the screen to blink constantly.
+
+  Fix: Updated the process search to target pineapple, pineapd, and pineapplepager (for compatibility).
+   All found display processes are now properly suspended at session start and resumed on exit.
+
+  ---
+  2. Device Reboot on Exit
+  When PagerSploit exited, pineapple remained suspended — leaving the device in a broken state with no
+  display or services.
+
+  Fix: Added an automatic reboot call when PagerSploit exits for any reason (normal shutdown, crash, or
+   button press). The device comes back up cleanly with all services restored.
+
+  ---
+  What Was Not Changed
+
+  - All WiFi attack modules (handshake capture, PMKID, deauth, evil portal, scan)
+  - Web UI and all browser controls
+  - Loot collection (handshakes, credentials, scans)
+  - Payload launch flow and button handling
+
+  ---
