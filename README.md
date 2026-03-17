@@ -119,6 +119,24 @@ Wordlists go in `PagerSploit/wordlists/` and will appear in the WPA Crack module
 
 ---
 
+Credits
+
+wickedNull
+Project creator and lead developer
+
+sinXne0
+Major development assistance, testing, and collaboration
+
+https://github.com/sinXne0
+
+⸻
+
+Disclaimer
+
+PagerSploit is intended only for authorized penetration testing, research, and educational use.
+
+The authors are not responsible for misuse of this software. Always obtain proper authorization before testing networks or devices.
+
 ## Notes
 
 - Deauth uses `wlan1mon` (5GHz monitor) by default to leave `wlan0mon` free for capture
